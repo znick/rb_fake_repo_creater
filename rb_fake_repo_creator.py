@@ -1,29 +1,42 @@
 #!/usr/bin/env python3
 
-DEBUG = True
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
+import threading
+import json
+
 RB_REPOS_PATH = "/var/lib/anytask/repos"
 
-from flask import Flask
-from flask import request
-app = Flask(__name__)
 
-import json
-import os
+class Handler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        repo_id = int(self.path[1:])
+
+        repo_path = os.path.join(RB_REPOS_PATH, str(repo_id))
+        created = False
+        if not os.path.exists(repo_path):
+            os.symlink(RB_REPOS_PATH, repo_path)
+            created = True
+
+        reply = {
+            "ok": True,
+            "created": created,
+        }
+
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(reply))
 
 
-@app.route('/<int:repo_id>')
-def suggest_handler(repo_id):
-    repo_path = os.path.join(RB_REPOS_PATH, str(repo_id))
-    created = False
-    if not os.path.exists(repo_path):
-        os.symlink(RB_REPOS_PATH, repo_path)
-        created = True
+class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
+    pass
 
-    reply = {
-        "ok": True,
-        "created": created,
-    }
-    return json.dumps(found), 200, {'Content-Type': 'text/json'}
+def run():
+    server = ThreadingSimpleServer(('0.0.0.0', 4444), Handler)
+    server.serve_forever()
+
 
 if __name__ == '__main__':
-    app.run(debug=DEBUG)
+    run()
