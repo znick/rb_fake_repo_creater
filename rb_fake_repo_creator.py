@@ -28,7 +28,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(json.dumps(reply))
+        self.wfile.write(json.dumps(reply).encode("utf-8"))
 
 
 class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
